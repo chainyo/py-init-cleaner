@@ -1,29 +1,83 @@
 #!/bin/bash
 
-# Define the base URL for the GitHub releases
-REPO_URL="https://github.com/chainyo/py-init-cleaner/releases/latest/download"
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Determine platform details
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-if [[ "$ARCH" == "x86_64" ]]; then
-    ARCH="x86_64"
-elif [[ "$ARCH" == "aarch64" ]]; then
-    ARCH="ARM64"
-else
-    echo "Unsupported architecture: $ARCH"
-    exit 1
+# Wrap everything in a function so that a truncated script
+# does not have the chance to cause issues.
+__wrap__() {
+
+# allow overriding the version
+VERSION=${PIC_VERSION:-latest}
+
+REPO=chainyo/py-init-cleaner
+PLATFORM=`uname -s`
+ARCH=`uname -m`
+
+if [[ $PLATFORM == "Darwin" ]]; then
+  PLATFORM="macos"
+elif [[ $PLATFORM == "Linux" ]]; then
+  PLATFORM="linux"
 fi
 
-# Construct the binary name and URL
-BINARY_NAME="py-init-cleaner-${OS}-${ARCH}"
-DOWNLOAD_URL="$REPO_URL/$BINARY_NAME"
+if [[ $ARCH == armv8* ]] || [[ $ARCH == arm64* ]] || [[ $ARCH == aarch64* ]]; then
+  ARCH="aarch64"
+elif [[ $ARCH == i686* ]]; then
+  ARCH="x86"
+fi
 
-# Download the binary
-curl -L $DOWNLOAD_URL -o $BINARY_NAME
+BINARY="pic-${ARCH}-${PLATFORM}"
 
-# Make the binary executable
-chmod +x $BINARY_NAME
+# Oddly enough GitHub has different URLs for latest vs specific version
+if [[ $VERSION == "latest" ]]; then
+  DOWNLOAD_URL=https://github.com/${REPO}/releases/latest/download/${BINARY}.gz
+else
+  DOWNLOAD_URL=https://github.com/${REPO}/releases/download/${VERSION}/${BINARY}.gz
+fi
+
+echo "This script will automatically download and launch pic (${VERSION}) for you."
+if [ "x$(id -u)" == "x0" ]; then
+  echo "warning: this script is running as root.  This is dangerous and unnecessary!"
+fi
+
+if ! hash curl 2> /dev/null; then
+  echo "error: you do not have 'curl' installed which is required for this script."
+  exit 1
+fi
+
+if ! hash gunzip 2> /dev/null; then
+  echo "error: you do not have 'gunzip' installed which is required for this script."
+  exit 1
+fi
+
+TEMP_FILE=`mktemp "${TMPDIR:-/tmp}/.picinstall.XXXXXXXX"`
+TEMP_FILE_GZ="${TEMP_FILE}.gz"
+
+cleanup() {
+  rm -f "$TEMP_FILE"
+  rm -f "$TEMP_FILE_GZ"
+}
+
+trap cleanup EXIT
+HTTP_CODE=$(curl -SL --progress-bar "$DOWNLOAD_URL" --output "$TEMP_FILE_GZ" --write-out "%{http_code}")
+if [[ ${HTTP_CODE} -lt 200 || ${HTTP_CODE} -gt 299 ]]; then
+  echo "error: platform ${PLATFORM} (${ARCH}) is unsupported."
+  exit 1
+fi
+
+rm -f "$TEMP_FILE"
+gunzip "$TEMP_FILE_GZ" 
+chmod +x "$TEMP_FILE"
+
+# Detect when the file cannot be executed due to NOEXEC /tmp.  Taken from rustup
+# https://github.com/rust-lang/rustup/blob/87fa15d13e3778733d5d66058e5de4309c27317b/rustup-init.sh#L158-L159
+if [ ! -x "$TEMP_FILE" ]; then
+  printf '%s\n' "Cannot execute $TEMP_FILE (likely because of mounting /tmp as noexec)." 1>&2
+  printf '%s\n' "Please copy the file to a location where you can execute binaries and run it manually." 1>&2
+  exit 1
+fi
 
 # Execute the binary
-./$BINARY_NAME "$@"
+"$TEMP_FILE" "$@"
+
+}; __wrap__
