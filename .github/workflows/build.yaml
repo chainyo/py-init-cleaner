@@ -50,7 +50,7 @@ jobs:
           echo "PIC_DRY_RUN: ${{ github.event.inputs.dry-run }}"
 
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Get the release version from the tag
         shell: bash
@@ -120,7 +120,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
@@ -149,7 +149,7 @@ jobs:
       shell: bash
       run: |
         outdir="$(scripts/cargo-out-dir "${{ env.TARGET_DIR }}")"
-        bin="pic-${{ matrix.name }}"
+        bin="py-init-cleaner-${{ matrix.name }}"
 
         if [ "${{ matrix.os }}" = "windows-2022" ]; then
           cp "target/${{ matrix.target }}/release/py-init-cleaner.exe" "$bin.exe"
@@ -173,13 +173,13 @@ jobs:
         gh release upload "${{ needs.create-release.outputs.pic_version }}" "${{ env.SHA256_FILE }}"
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ASSET }}
         path: ${{ env.ASSET }}
 
     - name: Upload artifact hash
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.SHA256_FILE }}
         path: ${{ env.SHA256_FILE }}
@@ -191,7 +191,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Upload Release Meta
       if: ${{ needs.create-release.outputs.pic_dry_run != 'yes' }}
@@ -204,7 +204,7 @@ jobs:
         gh release upload "${{ needs.create-release.outputs.pic_version }}" MANIFEST.json
 
     - name: Upload artifact hash
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: MANIFEST.json
         path: MANIFEST.json
