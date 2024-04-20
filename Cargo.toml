@@ -1,7 +1,10 @@
 [package]
 name = "py-init-cleaner"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
+authors = ["Thomas Chaigneau <t.chaigneau.tc@gmail.com>"]
+description = "Pre-commit hook to clean python __init__.py files automatically."
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
