@@ -26,7 +26,7 @@ elif [[ $ARCH == i686* ]]; then
   ARCH="x86"
 fi
 
-BINARY="pic-${ARCH}-${PLATFORM}"
+BINARY="py_init_cleaner-${ARCH}-${PLATFORM}"
 
 # Oddly enough GitHub has different URLs for latest vs specific version
 if [[ $VERSION == "latest" ]]; then
@@ -35,7 +35,7 @@ else
   DOWNLOAD_URL=https://github.com/${REPO}/releases/download/${VERSION}/${BINARY}.gz
 fi
 
-echo "This script will automatically download and launch pic (${VERSION}) for you."
+echo "This script will automatically download and launch py-init-cleaner (${VERSION}) for you."
 if [ "x$(id -u)" == "x0" ]; then
   echo "warning: this script is running as root.  This is dangerous and unnecessary!"
 fi
