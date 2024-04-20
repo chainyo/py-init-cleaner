@@ -1,7 +1,7 @@
--   id: py-init-cleaner
-    name: Python Init Cleaner
-    description: Pre-commit hook to clean your python __init__.py files automatically
-    entry: py-init-cleaner
-    language: script
-    types: [python]
-    files: __init__\.py$
+- id: py-init-cleaner
+  name: Python __init__.py Cleaner
+  description: Pre-commit hook to clean up __init__.py files automatically.
+  entry: scripts/bootstrap.sh
+  language: script
+  types: [python]
+  files: __init__\.py$
