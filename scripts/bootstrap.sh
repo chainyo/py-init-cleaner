@@ -26,7 +26,7 @@ elif [[ $ARCH == i686* ]]; then
   ARCH="x86"
 fi
 
-BINARY="py_init_cleaner-${ARCH}-${PLATFORM}"
+BINARY="py-init-cleaner-${ARCH}-${PLATFORM}"
 
 # Oddly enough GitHub has different URLs for latest vs specific version
 if [[ $VERSION == "latest" ]]; then
