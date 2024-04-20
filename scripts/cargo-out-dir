@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# Taken from https://github.com/astral-sh/rye/blob/main/scripts/cargo-out-dir
 
 # Finds Cargo's `OUT_DIR` directory from the most recent build.
 #
