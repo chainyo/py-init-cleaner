@@ -1,6 +1,7 @@
 use regex::Regex;
 use std::fs;
 use std::io::{self, Write};
+use walkdir::WalkDir;
 
 fn clean_file(path: &str) -> io::Result<()> {
     let data = fs::read_to_string(path)?;
@@ -12,12 +13,21 @@ fn clean_file(path: &str) -> io::Result<()> {
     Ok(())
 }
 
-fn main() {
+fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    for file in &args[1..] {
-        if let Err(e) = clean_file(file) {
-            writeln!(io::stderr(), "Error processing {}: {}", file, e).unwrap();
+    let target_directory = if args.len() > 1 { &args[1] } else { "." };
+
+    for entry in WalkDir::new(target_directory)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_name().to_string_lossy() == "__init__.py")
+    {
+        let path = entry.path().to_str().unwrap();
+        if let Err(e) = clean_file(path) {
+            writeln!(io::stderr(), "Error processing {}: {}", path, e)?;
             std::process::exit(1);
         }
     }
+
+    Ok(())
 }

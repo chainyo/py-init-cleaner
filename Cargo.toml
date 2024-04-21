@@ -10,3 +10,4 @@ license = "MIT"
 
 [dependencies]
 regex = "1.10.4"
+walkdir = "2.5.0"

@@ -3,5 +3,3 @@
   description: Pre-commit hook to clean up __init__.py files automatically.
   entry: scripts/bootstrap.sh
   language: script
-  types: [python]
-  files: __init__\.py$
