@@ -8,14 +8,10 @@ __wrap__() {
 
     # Download or use cached binary
     BINARY_PATH=$("$SCRIPT_DIR/download.sh")
+    echo "Using binary: $BINARY_PATH"
 
     # Execute the binary with all passed arguments
-    if [ -x "$BINARY_PATH" ]; then
-        "$BINARY_PATH" "$@"
-    else
-        echo "Failed to execute the binary."
-        exit 1
-    fi
+    "$BINARY_PATH" "$@"
 }
 
 __wrap__
