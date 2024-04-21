@@ -5,7 +5,7 @@ set -euo pipefail
 __wrap__() {
 
     # Download or use cached binary
-    BINARY_PATH=$(./download_binary.sh)
+    BINARY_PATH=$(./download.sh)
 
     # Execute the binary with all passed arguments
     if [ -x "$BINARY_PATH" ]; then
