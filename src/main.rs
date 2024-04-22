@@ -1,4 +1,5 @@
-
+/// Entry point for the program that removes the __main__ block from all __init__.py files in a directory.
+///
 use clap::Parser;
 use regex::Regex;
 use std::fs;
