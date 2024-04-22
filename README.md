@@ -9,9 +9,9 @@ Add this to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/chainyo/py-init-cleaner
-    rev: "v0.0.7"
+    rev: "v1.0.0"
     hooks:
       - id: py-init-cleaner
-        args: ["src/", "tests/"]
-
+        args: ["--dir", "src"] # 👈 Change the 'src' argument to the name of the folder you want to check
+        pass_filenames: false
 ```
