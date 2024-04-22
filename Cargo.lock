@@ -128,7 +128,7 @@ dependencies = [
 
 [[package]]
 name = "py-init-cleaner"
-version = "0.0.1"
+version = "1.0.0"
 dependencies = [
  "clap",
  "regex",
