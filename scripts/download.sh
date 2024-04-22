@@ -28,8 +28,6 @@ fi
 
 # Check if binary is already downloaded
 if [[ ! -f "$BINARY_PATH" ]]; then
-    echo "Downloading $BINARY..." >&2
-    echo "Downloading from: $DOWNLOAD_URL" >&2
     curl -SL --progress-bar "$DOWNLOAD_URL" -o "${BINARY_PATH}.gz"
 
     # Ensure the file is in gzip format
@@ -40,11 +38,8 @@ if [[ ! -f "$BINARY_PATH" ]]; then
         gunzip "${BINARY_PATH}.gz"
         chmod +x "$BINARY_PATH"
     else
-        echo "Downloaded file is not in gzip format" >&2
         exit 1
     fi
-else
-    echo "Using cached binary." >&2
 fi
 
 echo "$BINARY_PATH"
