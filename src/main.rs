@@ -1,7 +1,18 @@
+
+use clap::Parser;
 use regex::Regex;
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use walkdir::WalkDir;
+
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The directory to scan for __init__.py files.
+    #[arg(short, long)]
+    dir: String,
+}
 
 fn clean_file(path: &str) -> io::Result<()> {
     let data = fs::read_to_string(path)?;
@@ -13,27 +24,14 @@ fn clean_file(path: &str) -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> io::Result<()> {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+fn main() {
+    let args = Args::parse();
+    let dir = args.dir;
 
-    if args.is_empty() {
-        writeln!(io::stderr(), "Error: No directory path provided. Please specify a directory to scan for __init__.py files.")?;
-        std::process::exit(1);
-    }
-
-    for target_directory in args {
-        for entry in WalkDir::new(&target_directory)
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_name().to_string_lossy() == "__init__.py")
-        {
-            let path = entry.path().to_str().unwrap();
-            if let Err(e) = clean_file(path) {
-                writeln!(io::stderr(), "Error processing {}: {}", path, e)?;
-                std::process::exit(1);
-            }
+    for entry in WalkDir::new(&dir).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path().display().to_string();
+        if path.ends_with("__init__.py") {
+            clean_file(&path).unwrap();
         }
     }
-
-    Ok(())
 }
