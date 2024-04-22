@@ -1,0 +1,6 @@
+repos:
+  - repo: https://github.com/chainyo/py-init-cleaner
+    rev: "v0.0.7"
+    hooks:
+      - id: py-init-cleaner
+        args: ["src/", "tests/"]

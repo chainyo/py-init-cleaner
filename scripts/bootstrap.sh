@@ -8,7 +8,6 @@ __wrap__() {
 
     # Download or use cached binary
     BINARY_PATH=$("$SCRIPT_DIR/download.sh")
-    echo "Using binary: $BINARY_PATH"
 
     # Execute the binary with all passed arguments
     "$BINARY_PATH" "$@"

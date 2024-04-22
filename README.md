@@ -9,8 +9,9 @@ Add this to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/chainyo/py-init-cleaner
-    rev: v1.0.0
+    rev: "v0.0.7"
     hooks:
       - id: py-init-cleaner
-      args: ["src/", "tests/"]
+        args: ["src/", "tests/"]
+
 ```
