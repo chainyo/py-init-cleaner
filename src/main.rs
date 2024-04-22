@@ -14,18 +14,24 @@ fn clean_file(path: &str) -> io::Result<()> {
 }
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
-    let target_directory = if args.len() > 1 { &args[1] } else { "." };
+    let args: Vec<String> = std::env::args().skip(1).collect();
 
-    for entry in WalkDir::new(target_directory)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| e.file_name().to_string_lossy() == "__init__.py")
-    {
-        let path = entry.path().to_str().unwrap();
-        if let Err(e) = clean_file(path) {
-            writeln!(io::stderr(), "Error processing {}: {}", path, e)?;
-            std::process::exit(1);
+    if args.is_empty() {
+        writeln!(io::stderr(), "Error: No directory path provided. Please specify a directory to scan for __init__.py files.")?;
+        std::process::exit(1);
+    }
+
+    for target_directory in args {
+        for entry in WalkDir::new(&target_directory)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_name().to_string_lossy() == "__init__.py")
+        {
+            let path = entry.path().to_str().unwrap();
+            if let Err(e) = clean_file(path) {
+                writeln!(io::stderr(), "Error processing {}: {}", path, e)?;
+                std::process::exit(1);
+            }
         }
     }
 
