@@ -1,10 +1,8 @@
 /// Entry point for the program that removes the __main__ block from all __init__.py files in a directory.
 ///
 use clap::Parser;
-use regex::Regex;
 use std::fs;
 use std::io::{self, BufRead, Write};
-use std::path::Path;
 use walkdir::WalkDir;
 
 
@@ -28,9 +26,12 @@ fn clean_file(path: &str) -> io::Result<()> {
         if line.trim_start().starts_with("if __name__ == '__main__':")
             || line.trim_start().starts_with("if __name__ == \"__main__\":") {
                 inside_main_block = true;
-            } else if inside_main_block && !line.starts_with("    ") && !line.starts_with("\t") {
-                inside_main_block = false;
-                lines.push(line);
+            } else if inside_main_block
+                && !line.starts_with("    ")
+                && !line.starts_with("\t")
+                && !line.trim().is_empty() {
+                    inside_main_block = false;
+                    lines.push(line);
             } else if !inside_main_block {
                 lines.push(line);
             }
