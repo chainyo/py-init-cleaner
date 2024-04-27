@@ -3,7 +3,8 @@
 use clap::Parser;
 use regex::Regex;
 use std::fs;
-use std::io;
+use std::io::{self, BufRead, Write};
+use std::path::Path;
 use walkdir::WalkDir;
 
 
@@ -16,13 +17,30 @@ struct Args {
 }
 
 fn clean_file(path: &str) -> io::Result<()> {
-    let data = fs::read_to_string(path)?;
+    let file = fs::File::open(path)?;
+    let reader = io::BufReader::new(file);
 
-    // let re = Regex::new(r#"if __name__ == ['\"]__main__['\"]:\s*\n( +.*\n)*"#).unwrap();
-    let re = Regex::new(r#"if __name__ == ['"]__main__['"]:\s*\n( *(?:.*\S.*)?\n)*"#).unwrap();
-    let cleaned = re.replace_all(&data, "");
+    let mut lines: Vec<String> = Vec::new();
+    let mut inside_main_block = false;
 
-    fs::write(path, cleaned.as_ref())?;
+    for line_result in reader.lines() {
+        let line = line_result?;
+        if line.trim_start().starts_with("if __name__ == '__main__':")
+            || line.trim_start().starts_with("if __name__ == \"__main__\":") {
+                inside_main_block = true;
+            } else if inside_main_block && !line.starts_with("    ") && !line.starts_with("\t") {
+                inside_main_block = false;
+                lines.push(line);
+            } else if !inside_main_block {
+                lines.push(line);
+            }
+    }
+
+    let mut file = fs::File::create(path)?;
+    for line in lines {
+        writeln!(file, "{}", line)?;
+    }
+
     Ok(())
 }
 
