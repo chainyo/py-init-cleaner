@@ -18,7 +18,8 @@ struct Args {
 fn clean_file(path: &str) -> io::Result<()> {
     let data = fs::read_to_string(path)?;
 
-    let re = Regex::new(r#"if __name__ == ['\"]__main__['\"]:\s*\n( +.*\n)*"#).unwrap();
+    // let re = Regex::new(r#"if __name__ == ['\"]__main__['\"]:\s*\n( +.*\n)*"#).unwrap();
+    let re = Regex::new(r#"if __name__ == ['"]__main__['"]:\s*\n( *(?:.*\S.*)?\n)*"#).unwrap();
     let cleaned = re.replace_all(&data, "");
 
     fs::write(path, cleaned.as_ref())?;
