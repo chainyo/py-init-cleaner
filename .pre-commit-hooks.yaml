@@ -4,4 +4,6 @@
   entry: py-init-cleaner
   language: rust
   types: [python]
-  exclude: '^.pre-commit-config.yaml$'
+  pass_filenames: false
+  always_run: true
+  args: ["--dir", "."]
