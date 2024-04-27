@@ -26,6 +26,12 @@ def test_cli():
 # Path: tests/sub-module/test_cli.py
 if __name__ == "__main__":
     test_cli()
+    print("Hello")
+
+    # Path: tests/sub-module/__init__.py
+    a = 1
+    b = 2
+    c = a + b
 
 # Other stuff
 import polars as pl
