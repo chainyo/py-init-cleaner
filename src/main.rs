@@ -61,38 +61,25 @@ fn main() {
 mod tests {
     use super::*;
     use std::io::Write;
-    use tempfile::Builder
+    use tempfile::Builder;
 
     #[test]
     fn test_clean_file() {
         let dir = Builder::new().prefix("example").tempdir().unwrap();
         let file_path = dir.path().join("__init__.py");
 
-        let content = r#"""
-"""Another testing file"""
-
+        let content = r#"
 import pandas as pd
-
-# Create a DataFrame
-df = pd.DataFrame({
-    "a": [1, 2, 3],
-    "b": [4, 5, 6],
-    "c": [7, 8, 9]
-})
-
 # Create a Series
 series = pd.Series([1, 2, 3], name="a")
 
-def test_cli():
+def test_cli(df, series) -> None:
     """Test the CLI commands."""
-    # Test the DataFrame CLI command
     df_cli = pd.DataFrameCLI(df)
     assert df_cli == df
 
-    # Test the Series CLI command
     series_cli = pd.SeriesCLI(series)
     assert series_cli == series
-
 
 # Path: tests/sub-module/test_cli.py
 if __name__ == "__main__":
@@ -102,7 +89,6 @@ if __name__ == "__main__":
     # Path: tests/sub-module/__init__.py
     a = 1
     b = 2
-    c = a + b
 
 # Other stuff
 import polars as pl
@@ -112,9 +98,8 @@ import pandas as pd
 df = pl.DataFrame({
     "a": [1, 2, 3],
     "b": [4, 5, 6],
-    "c": [7, 8, 9]
 })
-"""#;
+"#;
 
     let mut file = fs::File::create(&file_path).unwrap();
     writeln!(file, "{}", content).unwrap();
@@ -123,31 +108,20 @@ df = pl.DataFrame({
     clean_file(_path).unwrap();
 
     let modified_content = fs::read_to_string(&file_path).unwrap();
-    assert_eq!(modified_content, r#"""
-"""Another testing file"""
-
+    let expected_content = r#"
 import pandas as pd
-
-# Create a DataFrame
-df = pd.DataFrame({
-    "a": [1, 2, 3],
-    "b": [4, 5, 6],
-    "c": [7, 8, 9]
-})
-
 # Create a Series
 series = pd.Series([1, 2, 3], name="a")
 
-def test_cli():
+def test_cli(df, series) -> None:
     """Test the CLI commands."""
-    # Test the DataFrame CLI command
     df_cli = pd.DataFrameCLI(df)
     assert df_cli == df
 
-    # Test the Series CLI command
     series_cli = pd.SeriesCLI(series)
     assert series_cli == series
 
+# Path: tests/sub-module/test_cli.py
 # Other stuff
 import polars as pl
 import pandas as pd
@@ -156,10 +130,11 @@ import pandas as pd
 df = pl.DataFrame({
     "a": [1, 2, 3],
     "b": [4, 5, 6],
-    "c": [7, 8, 9]
 })
-"""#);
 
+"#;
+
+    assert_eq!(modified_content, expected_content);
     dir.close().unwrap();
     }
 }
