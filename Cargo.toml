@@ -12,3 +12,6 @@ license = "MIT"
 clap = { version = "4.5.4", features = ["derive"] }
 regex = "1.10.4"
 walkdir = "2.5.0"
+
+[dev-dependencies]
+tempfile = "3.10.1"

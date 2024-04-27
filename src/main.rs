@@ -56,3 +56,110 @@ fn main() {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::Builder
+
+    #[test]
+    fn test_clean_file() {
+        let dir = Builder::new().prefix("example").tempdir().unwrap();
+        let file_path = dir.path().join("__init__.py");
+
+        let content = r#"""
+"""Another testing file"""
+
+import pandas as pd
+
+# Create a DataFrame
+df = pd.DataFrame({
+    "a": [1, 2, 3],
+    "b": [4, 5, 6],
+    "c": [7, 8, 9]
+})
+
+# Create a Series
+series = pd.Series([1, 2, 3], name="a")
+
+def test_cli():
+    """Test the CLI commands."""
+    # Test the DataFrame CLI command
+    df_cli = pd.DataFrameCLI(df)
+    assert df_cli == df
+
+    # Test the Series CLI command
+    series_cli = pd.SeriesCLI(series)
+    assert series_cli == series
+
+
+# Path: tests/sub-module/test_cli.py
+if __name__ == "__main__":
+    test_cli()
+    print("Hello")
+
+    # Path: tests/sub-module/__init__.py
+    a = 1
+    b = 2
+    c = a + b
+
+# Other stuff
+import polars as pl
+import pandas as pd
+
+# Create a DataFrame
+df = pl.DataFrame({
+    "a": [1, 2, 3],
+    "b": [4, 5, 6],
+    "c": [7, 8, 9]
+})
+"""#;
+
+    let mut file = fs::File::create(&file_path).unwrap();
+    writeln!(file, "{}", content).unwrap();
+
+    let _path = file_path.to_str().unwrap();
+    clean_file(_path).unwrap();
+
+    let modified_content = fs::read_to_string(&file_path).unwrap();
+    assert_eq!(modified_content, r#"""
+"""Another testing file"""
+
+import pandas as pd
+
+# Create a DataFrame
+df = pd.DataFrame({
+    "a": [1, 2, 3],
+    "b": [4, 5, 6],
+    "c": [7, 8, 9]
+})
+
+# Create a Series
+series = pd.Series([1, 2, 3], name="a")
+
+def test_cli():
+    """Test the CLI commands."""
+    # Test the DataFrame CLI command
+    df_cli = pd.DataFrameCLI(df)
+    assert df_cli == df
+
+    # Test the Series CLI command
+    series_cli = pd.SeriesCLI(series)
+    assert series_cli == series
+
+# Other stuff
+import polars as pl
+import pandas as pd
+
+# Create a DataFrame
+df = pl.DataFrame({
+    "a": [1, 2, 3],
+    "b": [4, 5, 6],
+    "c": [7, 8, 9]
+})
+"""#);
+
+    dir.close().unwrap();
+    }
+}
