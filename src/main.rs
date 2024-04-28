@@ -14,15 +14,87 @@ struct Args {
     dir: String,
 }
 
-fn clean_file(path: &str) -> io::Result<()> {
-    let file = fs::File::open(path)?;
-    let reader = io::BufReader::new(file);
+#[derive(Debug)]
+struct PyImports {
+    /// List of attributes imported in the file.
+    attributes: Vec<String>,
+}
 
-    let mut lines: Vec<String> = Vec::new();
+impl PyImports {
+    fn from_list_of_strings(lines: Vec<String>) -> Self {
+        let mut attributes = Vec::new();
+        for line in lines {
+            let mut parts = line.split_whitespace();
+            // If the line starts with import, then the next part is the module name.
+            match parts.next().unwrap() {
+                "import" => {
+                    // Check if import module as alias. If so, add the alias to the attributes.
+                    let module = parts.next().unwrap();
+                    if module.contains("as") {
+                        let _ = parts.next(); // Skip the "as" part.
+                        let alias = parts.next().unwrap();
+                        attributes.push(alias.to_string());
+                    } else if module.contains(".") {
+                        let parts: Vec<&str> = module.split(".").collect();
+                        attributes.push(parts[parts.len() - 1].to_string());
+                    } else {
+                        attributes.push(module.to_string());
+                    }
+                }
+                "from" => {
+                    let _ = parts.next(); // Skip the module name.
+                    let _ = parts.next(); // Skip the "import" part.
+                    for part in parts {
+                        if part.ends_with(",") {
+                            attributes.push(part[..part.len() - 1].to_string());
+                        } else {
+                            attributes.push(part.to_string());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        PyImports { attributes }
+    }
+}
+
+fn prepare_import_list(lines: Vec<String>) -> Vec<String> {
+    let mut import_lines = Vec::new();
+    let mut multiline_imports = Vec::new();
+    let mut in_multiline_import = false;
+
+    for line in lines {
+        if line.starts_with("import") {
+            import_lines.push(line);
+        } else if line.starts_with("from") {
+            // Check if line ends with { which means it is a multiline import.
+            if line.ends_with("{") {
+                multiline_imports.push(line);
+                in_multiline_import = true;
+            } else {
+                import_lines.push(line);
+            }
+        } else if in_multiline_import {
+            if line.ends_with("}") {
+                multiline_imports.push(line);
+                in_multiline_import = false;
+                import_lines.push(multiline_imports.join(" "));
+                multiline_imports.clear();
+            } else {
+                multiline_imports.push(line);
+            }
+        }
+    }
+    import_lines
+}
+
+fn remove_main_block(lines: Vec<String>) -> Vec<String> {
+    let mut cleaned_lines: Vec<String> = Vec::new();
     let mut inside_main_block = false;
 
-    for line_result in reader.lines() {
-        let line = line_result?;
+    for line in lines {
         if line.trim_start().starts_with("if __name__ == '__main__':")
             || line.trim_start().starts_with("if __name__ == \"__main__\":") {
                 inside_main_block = true;
@@ -31,14 +103,31 @@ fn clean_file(path: &str) -> io::Result<()> {
                 && !line.starts_with("\t")
                 && !line.trim().is_empty() {
                     inside_main_block = false;
-                    lines.push(line);
+                    cleaned_lines.push(line);
             } else if !inside_main_block {
-                lines.push(line);
+                cleaned_lines.push(line);
             }
     }
 
+    cleaned_lines
+}
+
+fn clean_file(path: &str) -> io::Result<()> {
+    let file = fs::File::open(path)?;
+    let reader = io::BufReader::new(file);
+
+    // Get lines
+    let lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
+    // Run remove_main_block
+    let cleaned_lines = remove_main_block(lines);
+    // Fix imports
+    let prepared_imports = prepare_import_list(cleaned_lines.clone());
+    println!("{:?}", prepared_imports);
+    let pyimports = PyImports::from_list_of_strings(prepared_imports);
+    println!("{:?}", pyimports.attributes);
+
     let mut file = fs::File::create(path)?;
-    for line in lines {
+    for line in cleaned_lines {
         writeln!(file, "{}", line)?;
     }
 
@@ -64,12 +153,34 @@ mod tests {
     use tempfile::Builder;
 
     #[test]
+    fn test_pyimports() {
+        let lines = vec![
+            "import datetime".to_string(),
+            "import pandas as pd".to_string(),
+            "import torch.nn".to_string(),
+            "import torch.functional.nn as nn".to_string(),
+            "import torch.functional.nn".to_string(),
+            "from numpy impprt ndarray".to_string(),
+            "from polars import DataFrame, Series, String, Int8".to_string(),
+        ];
+        let pyimports = PyImports::from_list_of_strings(lines);
+        assert_eq!(
+            pyimports.attributes,
+            vec!["datetime", "pd", "nn", "nn", "nn", "ndarray", "DataFrame", "Series", "String", "Int8"]
+        );
+    }
+
+    #[test]
     fn test_clean_file() {
         let dir = Builder::new().prefix("example").tempdir().unwrap();
         let file_path = dir.path().join("__init__.py");
 
         let content = r#"
 import pandas as pd
+from torch import { 
+    nn,
+    functional as F,
+}
 # Create a Series
 series = pd.Series([1, 2, 3], name="a")
 
@@ -110,6 +221,10 @@ df = pl.DataFrame({
     let modified_content = fs::read_to_string(&file_path).unwrap();
     let expected_content = r#"
 import pandas as pd
+from torch import { 
+    nn,
+    functional as F,
+}
 # Create a Series
 series = pd.Series([1, 2, 3], name="a")
 
