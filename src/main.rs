@@ -23,6 +23,18 @@ struct Args {
 }
 
 #[derive(Debug)]
+struct AllExports {
+    /// List of attributes exported in the __all__ statement
+    exports: Vec<String>,
+}
+
+impl AllExports {
+    fn new(exports: Vec<String>) -> Self {
+        Self { exports }
+    }
+}
+
+#[derive(Debug)]
 struct PyImports {
     /// List of attributes imported in the file.
     attributes: Vec<String>,
@@ -68,6 +80,34 @@ impl PyImports {
         }
 
         PyImports { attributes }
+    }
+}
+
+fn check_for_all_statement_and_extract_if_present(lines: &Vec<String>) -> Option<AllExports> {
+    // Regular expression to match __all__ statements
+    let re = regex::Regex::new(r"^\s*__all__\s*=\s*\[([^]]*)\]").unwrap();
+
+    // Iterate over each line in the file
+    let mut catch_exports = Vec::new();
+    for line in lines {
+        // Check if the line contains __all__ statement
+        if let Some(captures) = re.captures(&line) {
+            println!("{:?}", captures);
+            // Extract the imports from the __all__ statement
+            if let Some(imports) = captures.get(1) {
+                let imports_str = imports.as_str();
+                // Split the imports by commas and trim whitespace
+                for import in imports_str.split(',').map(|s| s.trim()) {
+                    catch_exports.push(import.to_string())
+                }
+            }
+        }
+    }
+    // Check if any exports were found
+    if !catch_exports.is_empty() {
+        Some(AllExports::new(catch_exports))
+    } else {
+        None
     }
 }
 
@@ -141,13 +181,15 @@ fn clean_file(path: &str) -> io::Result<()> {
     // Get lines
     let lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
     // Run remove_main_block
-    let cleaned_lines = remove_main_block(lines);
-    // Fix imports
+    let lines_no_main_block = remove_main_block(lines);
+    // Fix imports in __all__ statement
     let prepared_imports = prepare_import_list(path);
     let _ = PyImports::from_list_of_strings(prepared_imports);
+    let all_statement = check_for_all_statement_and_extract_if_present(&lines_no_main_block);
+    println!("{:?}", all_statement);
 
     let mut file = fs::File::create(path)?;
-    for line in cleaned_lines {
+    for line in lines_no_main_block {
         writeln!(file, "{}", line)?;
     }
     Ok(())
@@ -241,6 +283,8 @@ df = pl.DataFrame({
     "a": [1, 2, 3],
     "b": [4, 5, 6],
 })
+
+__all__ = ["pd", "F"]
 "#;
 
         let mut file = fs::File::create(&file_path).unwrap();
@@ -278,6 +322,8 @@ df = pl.DataFrame({
     "a": [1, 2, 3],
     "b": [4, 5, 6],
 })
+
+__all__ = ["pd", "F"]
 
 "#;
 
