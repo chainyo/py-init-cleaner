@@ -32,6 +32,23 @@ impl AllExports {
     fn new(exports: Vec<String>) -> Self {
         Self { exports }
     }
+
+    fn from_imports(imports: PyImports) -> Self {
+        let exports = imports.attributes.clone();
+        Self::new(exports)
+    }
+
+    fn into_string(self) -> String {
+        let mut all_statement_str = "__all__ = [\n".to_owned();
+        let mut exports = self.exports;
+        exports.sort();
+        exports.dedup();
+        for export in exports {
+            all_statement_str.push_str(&format!("    \"{}\",\n", export));
+        }
+        all_statement_str.push_str("]\n");
+        all_statement_str.to_owned()
+    }
 }
 
 #[derive(Debug)]
@@ -83,34 +100,6 @@ impl PyImports {
     }
 }
 
-fn check_for_all_statement_and_extract_if_present(lines: &Vec<String>) -> Option<AllExports> {
-    // Regular expression to match __all__ statements
-    let re = regex::Regex::new(r"^\s*__all__\s*=\s*\[([^]]*)\]").unwrap();
-
-    // Iterate over each line in the file
-    let mut catch_exports = Vec::new();
-    for line in lines {
-        // Check if the line contains __all__ statement
-        if let Some(captures) = re.captures(&line) {
-            println!("{:?}", captures);
-            // Extract the imports from the __all__ statement
-            if let Some(imports) = captures.get(1) {
-                let imports_str = imports.as_str();
-                // Split the imports by commas and trim whitespace
-                for import in imports_str.split(',').map(|s| s.trim()) {
-                    catch_exports.push(import.to_string())
-                }
-            }
-        }
-    }
-    // Check if any exports were found
-    if !catch_exports.is_empty() {
-        Some(AllExports::new(catch_exports))
-    } else {
-        None
-    }
-}
-
 fn prepare_import_list(path: &str) -> Vec<String> {
     // Use regex to match all the import statements.
     let mut imports = Vec::new();
@@ -134,9 +123,10 @@ fn prepare_import_list(path: &str) -> Vec<String> {
     imports
 }
 
-fn remove_main_block(lines: Vec<String>) -> Vec<String> {
+fn remove_main_and_all_blocks(lines: Vec<String>) -> Vec<String> {
     let mut cleaned_lines: Vec<String> = Vec::new();
     let mut inside_main_block = false;
+    let mut inside_all_block = false;
 
     for line in lines {
         if line.trim_start().starts_with("if __name__ == '__main__':")
@@ -145,6 +135,8 @@ fn remove_main_block(lines: Vec<String>) -> Vec<String> {
                 .starts_with("if __name__ == \"__main__\":")
         {
             inside_main_block = true;
+        } else if line.trim_start().starts_with("__all__ = [") {
+            inside_all_block = true;
         } else if inside_main_block
             && !line.starts_with("    ")
             && !line.starts_with('\t')
@@ -152,7 +144,14 @@ fn remove_main_block(lines: Vec<String>) -> Vec<String> {
         {
             inside_main_block = false;
             cleaned_lines.push(line);
-        } else if !inside_main_block {
+        } else if inside_all_block
+            && !line.starts_with("    ")
+            && !line.starts_with('\t')
+            && !line.trim().is_empty()
+        {
+            inside_all_block = false;
+            cleaned_lines.push(line);
+        } else if !inside_main_block && !inside_all_block {
             cleaned_lines.push(line);
         }
     }
@@ -181,17 +180,18 @@ fn clean_file(path: &str) -> io::Result<()> {
     // Get lines
     let lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
     // Run remove_main_block
-    let lines_no_main_block = remove_main_block(lines);
-    // Fix imports in __all__ statement
+    let lines_no_main_block = remove_main_and_all_blocks(lines);
+    // Prepare the __all__ statement from the imports
     let prepared_imports = prepare_import_list(path);
-    let _ = PyImports::from_list_of_strings(prepared_imports);
-    let all_statement = check_for_all_statement_and_extract_if_present(&lines_no_main_block);
-    println!("{:?}", all_statement);
+    let python_imports = PyImports::from_list_of_strings(prepared_imports);
+    let all_statement_from_imports = AllExports::from_imports(python_imports);
 
     let mut file = fs::File::create(path)?;
     for line in lines_no_main_block {
         writeln!(file, "{}", line)?;
     }
+    // Add the __all__ statement
+    writeln!(file, "{}", all_statement_from_imports.into_string())?;
     Ok(())
 }
 
@@ -323,7 +323,13 @@ df = pl.DataFrame({
     "b": [4, 5, 6],
 })
 
-__all__ = ["pd", "F"]
+__all__ = [
+    "F",
+    "data",
+    "nn",
+    "pd",
+    "pl",
+]
 
 "#;
 
