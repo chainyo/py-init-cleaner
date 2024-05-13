@@ -7,11 +7,11 @@ use walkdir::WalkDir;
 
 const IMPORT_PATTERNS: [&str; 3] = [
     // import module
-    r"import\s[a-z]+(\.[a-z]+)*(?:\sas\s[a-z]+)?",
+    r"(import\s[\w]+(\.[\w]+)*(\sas\s[\w]+)?)",
     // from mod(.submod...) import submodule (as alias)
-    r"from\s[a-z]+(\.[a-z]+)*\simport\s[a-z]+(?:\sas\s[a-z]+)?",
+    r"from\s[\w]+(\.[\w]+)*\simport\s[\w]+(?:\sas\s[\w]+)?",
     // from mod(.submod...) import {submod1, submod2, ...} on multiple lines,
-    r"from\s+[a-z]+(?:\.[a-z]+)*\s+import\s+\{[^}]*\}",
+    r"from\s+[\w]+(?:\.[\w]+)*\s+import\s+\{[^}]*\}",
 ];
 
 #[derive(Parser, Debug)]
@@ -147,6 +147,7 @@ fn remove_main_and_all_blocks(lines: Vec<String>) -> Vec<String> {
         } else if inside_all_block
             && !line.starts_with("    ")
             && !line.starts_with('\t')
+            && !line.starts_with(']')
             && !line.trim().is_empty()
         {
             inside_all_block = false;
